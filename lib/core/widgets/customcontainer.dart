@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:weatherapp/core/constants/app_colors.dart';
+import 'package:weatherapp/core/utils/extention_layout.dart';
 
 class CustomContainer extends StatelessWidget {
   final Widget? child;
@@ -48,7 +49,9 @@ class CustomContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: finalGradient == null ? (color ?? AppColors.white) : null,
         gradient: finalGradient,
-        borderRadius: BorderRadius.circular(borderRadius ?? 18.r),
+        borderRadius: BorderRadius.circular(
+          borderRadius ?? context.res(mobile: 18.r)!,
+        ),
         boxShadow: isBoxShadow
             ? boxShadow ??
                   [

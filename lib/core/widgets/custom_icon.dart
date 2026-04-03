@@ -21,8 +21,8 @@ class CustomIcon extends StatelessWidget {
     return Icon(
       icon,
       color: iconColor ?? AppColors.black,
-      size: iconSize ?? 20.sp,
-      weight: iconWeight ?? 400,
+      size: iconSize,
+      weight: iconWeight,
     );
   }
 }

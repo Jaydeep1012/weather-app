@@ -9,6 +9,7 @@ import 'package:weatherapp/core/widgets/custom_text.dart';
 
 import '../controllers/home_controller.dart';
 import '../core/constants/app_colors.dart';
+import '../core/utils/responsive helperclass.dart';
 import '../core/widgets/customContainer.dart';
 import '../core/widgets/custom_search.dart';
 
@@ -25,67 +26,87 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final resUI = AppSize(context);
+    bool isLandscap = context.isLandscape;
     return Scaffold(
       body: SafeArea(
+        left: !isLandscap,
+        top: !isLandscap,
+        right: !isLandscap,
+        bottom: !isLandscap,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+          padding: EdgeInsets.all(16.dg),
           child: Column(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // ૧. સર્ચ બાર (આખી જગ્યા રોકશે પણ લિમિટમાં)
                   Expanded(
+                    flex: context.isLandscape
+                        ? 7
+                        : 8, // લેન્ડસ્કેપમાં ૭ ભાગ, પોટ્રેટમાં ૮
                     child: CustomContainer(
-                      borderRadius: 10.r,
+                      borderRadius: resUI.borderRadius,
                       defaultGradient: false,
                       color: AppColors.white.withOpacity(0.3),
                       child: Obx(
-                        () => CustomSearch(
-                          textEditingController: controller.searchController,
-                          hintText: "Search Location",
-
-                          prefixIcon: Icons.search,
-                          suffixIcon: controller.searchQuery.value.isNotEmpty
-                              ? Icons.close
-                              : null,
-
-                          onTap: () => controller.clearSearch(),
-
-                          onChange: (v) => controller.searchQuery.value = v,
-                          onSubmit: (value) => controller.searchByCity(value),
-                          keyboardType: TextInputType.text,
-                          textInputAction: TextInputAction.search,
-
-                          /// keyboard na search par tap kare to search action execute thay
+                        () => Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 10.dg, vertical: 3.dg),
+                          child: CustomSearch(
+                            textEditingController: controller.searchController,
+                            hintText: "Search Location",
+                            prefixIcon: Icons.search,
+                            suffixIcon: controller.searchQuery.value.isNotEmpty
+                                ? Icons.close
+                                : null,
+                            onTap: () => controller.clearSearch(),
+                            onChange: (v) => controller.searchQuery.value = v,
+                            onSubmit: (value) => controller.searchByCity(value),
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.search,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(width: 5.w),
+
+                  SizedBox(
+                      width: 8
+                          .w), // થોડી વધારે જગ્યા આપવી (લેન્ડસ્કેપ માટે સારી લાગે)
+
+                  // ૨. હોમ બટન (રેપ વિથ ઇન્ટ્રિન્સિક અથવા ફિક્સ્ડ પેડિંગ)
                   CustomContainer(
-                    height: 40.h,
-                    width: 60.w,
-                    borderRadius: 10.r,
+                    borderRadius: resUI.borderRadius,
                     defaultGradient: false,
                     color: AppColors.white.withOpacity(0.3),
-
                     child: InkWell(
-                      onTap: () {
-                        Get.toNamed(AppRoutes.home);
-                      },
-                      child: Center(
-                        child: CustomText(
-                          text: "Home",
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14.sp,
-                          color: Colors.deepOrange,
+                      borderRadius: BorderRadius.circular(12.r),
+                      onTap: () => Get.toNamed(AppRoutes.home),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          // લેન્ડસ્કેપમાં વર્ટિકલ પેડિંગ થોડું ઘટાડવું કારણ કે હાઈટ ઓછી હોય છે
+                          horizontal: 15.dg,
+                          vertical: context.isLandscape ? 4.dg : 15.dg,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CustomText(
+                              text: "Home",
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
+                              color: Colors.deepOrange,
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-
               SizedBox(height: 10.h),
               Expanded(
                 child: ClipRRect(
@@ -93,6 +114,9 @@ class _MapScreenState extends State<MapScreen> {
                   child: FlutterMap(
                     mapController: mapCtrl.mapControllerImpl,
                     options: MapOptions(
+                      onMapReady: () {
+                        mapCtrl.isMapReady.value = true;
+                      },
                       initialCenter: LatLng(
                         28.6139,
                         77.2090,
@@ -110,11 +134,10 @@ class _MapScreenState extends State<MapScreen> {
                       TileLayer(
                         urlTemplate:
                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.your.app.weatherapp',
+                        userAgentPackageName: 'com.your.app.weather',
                       ),
-
-                      // 2. તમારા કંટ્રોલરમાંથી માર્કર્સ બતાવવા માટે
                       Obx(() => MarkerLayer(markers: mapCtrl.markers.value)),
+                      // 2. તમારા કંટ્રોલરમાંથી માર્કર્સ બતાવવા માટે
                     ],
                   ),
                 ),

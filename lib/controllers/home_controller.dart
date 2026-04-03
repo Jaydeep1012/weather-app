@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'dart:developer';
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart' as geo;
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+//import 'package:timezone/browser.dart' as tz;
 import 'package:weatherapp/controllers/map_controller.dart';
 
 import '../core/constants/image_assets.dart';
 import '../core/enums/weather_theam.dart';
-import '../models/weatherModel.dart';
-import '../services/weather_services.dart';
-import 'currentlocation_controller.dart';
+import '../models/weatherModel.dart' show HourlyItem, WeatherModel;
+import '../services/weather_services.dart' show WeatherServices;
+import 'currentlocation_controller.dart' show LocationController;
 
 class WeatherController extends GetxController
     with StateMixin<List<HourlyItem>> {
@@ -24,24 +25,41 @@ class WeatherController extends GetxController
   // Observable Variables
   final Rxn<WeatherModel> weather = Rxn<WeatherModel>();
   final RxList<HourlyItem> listData = <HourlyItem>[].obs;
-  final RxString currentTime = "".obs;
-  final searchQuery = "".obs;
-  final isLoading = false.obs;
+
+  // Time Variables
+  final RxString currentTime = "".obs; // Device (India) Time
+  final RxString weatherCurrentTime = "".obs; // Searched Location Time
+  final RxBool showLocalTime = false.obs; // Flag to show/hide extra time
+  final RxInt utcOffsetSecond = 19800.obs; // Default to India Offset (5.5 hrs)
+  final weatherModel = Rxn<WeatherModel>();
+
+  /// required parameter hoy to WeatherModel model ne aa type declare karo
+  final RxString searchQuery = "".obs;
+  final RxBool isLoading = false.obs;
   final RxInt selectedHourIndex = DateTime.now().hour.obs;
+  final now = DateTime.now();
 
   Timer? _globalTimer;
 
   @override
   void onInit() {
     super.onInit();
+
     _startGlobalTimer();
-    // એપ લોડ થાય ત્યારે સીધું જ કરંટ લોકેશનથી ડેટા ફેચ કરો
-    fetchWeatherByLocation();
+    fetchWeatherByLocation(); // Initial Load
   }
 
-  // --- Core Logic ---
+  /// create getter
+  HourlyItem get currentHourWeather {
+    int hour = DateTime.now().hour;
+    return (listData.isNotEmpty && listData.length > hour)
+        ? listData[hour]
+        : HourlyItem.empty();
+  }
 
-  /// ૧. કરંટ GPS લોકેશન દ્વારા વેધર મેળવવું
+  // --- API Methods ---
+
+  /// GPS દ્વારા વેધર ફેચ કરવું
   Future<void> fetchWeatherByLocation() async {
     try {
       isLoading.value = true;
@@ -49,10 +67,10 @@ class WeatherController extends GetxController
 
       Position? position = await locationController.getCurrentLocation();
       if (position != null) {
-        searchQuery.value = ""; // GPS લોકેશન હોય ત્યારે સર્ચ ખાલી કરો
+        searchQuery.value = "";
         await getApiCall(position.latitude, position.longitude);
       } else {
-        _handleError("Location permission denied or disabled");
+        _handleError("Location access denied.");
       }
     } catch (e) {
       _handleError("Location Error: $e");
@@ -61,10 +79,23 @@ class WeatherController extends GetxController
     }
   }
 
-  /// ૨. શહેરના નામ દ્વારા વેધર સર્ચ કરવું (Geocoding)
+  void updateLocalTime(String timeZoneName) {
+    try {
+      // var location = tz.getLocation(timeZoneName);
+      // var nowTime = tz.TZDateTime.now(location);
+      weatherCurrentTime.value = DateFormat("hh:mm a").format(now);
+    } catch (e) {
+      /// જો એરર આવે તો ડિફોલ્ટ UTC ટાઈમ બતાવો
+      weatherCurrentTime.value = DateFormat(
+        'hh:mm a',
+      ).format(DateTime.now().toUtc());
+      print("Time Error show : $e");
+    }
+  }
+
+  /// શહેરના નામ દ્વારા સર્ચ કરવું
   Future<void> searchByCity(String cityName) async {
     if (cityName.isEmpty) return;
-
     try {
       isLoading.value = true;
       List<geo.Location> locations = await geo.locationFromAddress(cityName);
@@ -73,21 +104,29 @@ class WeatherController extends GetxController
         final loc = locations.first;
         await getApiCall(loc.latitude, loc.longitude);
 
+        // અહીં '.value' વાપરજો જો તમે Rxn<WeatherModel> અથવા .obs વાપર્યું હોય
+        if (weatherModel.value != null &&
+            weatherModel.value!.timezone != null) {
+          updateLocalTime(weatherModel.value!.timezone!);
+        }
+
         final mapCtrl = Get.find<AppMapController>();
-        mapCtrl.moveToLocation(loc.latitude, loc.longitude);
+        if (mapCtrl.isMapReady.value) {
+          mapCtrl.moveToLocation(loc.latitude, loc.longitude);
+        }
 
         searchQuery.value = cityName;
         FocusManager.instance.primaryFocus?.unfocus();
+        print("Search CITY Name :${searchQuery.value}");
       }
     } catch (e) {
-      log("Geocoding Error: $e");
       _handleError("City not found: $cityName");
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// ૩. મેઈન API કોલ જે ડેટા સેટ કરે છે
+  /// મુખ્ય API ફંક્શન
   Future<void> getApiCall(double lat, double long) async {
     try {
       final apiResponse = await _weatherServices.fetchWeatherApi(
@@ -96,92 +135,113 @@ class WeatherController extends GetxController
       );
 
       if (apiResponse != null) {
+        // ૧. ઓફસેટ અપડેટ કરો
+        utcOffsetSecond.value = apiResponse.utcOffsetSeconds ?? 19800;
+
+        // ૨. ડેટા સ્ટોર કરો
         weather.value = apiResponse;
         listData.assignAll(apiResponse.getItems);
-
         selectedHourIndex.value = DateTime.now().hour;
+
+        // ૩. ટાઈમ તરત જ અપડેટ કરો (Timer ની રાહ જોયા વગર)
+        _updateLocalTime();
+
         change(listData, status: RxStatus.success());
       } else {
         change(null, status: RxStatus.empty());
       }
     } catch (e) {
-      log("API Error: $e");
       _handleError("Failed to fetch weather data");
     }
   }
 
-  // --- Getters & Helpers ---
-
-  void clearSearch() {
-    searchController.clear();
-    searchQuery.value = "";
-  }
-
-  void updateSelectedHour(int index) {
-    if (index >= 0 && index < listData.length) {
-      selectedHourIndex.value = index;
-    }
-  }
-
-  HourlyItem get currentHourWeather {
-    int hour = DateTime.now().hour;
-    return (listData.isNotEmpty && listData.length > hour)
-        ? listData[hour]
-        : HourlyItem.empty();
-  }
-
-  HourlyItem get selectedDisplayData {
-    return (listData.isNotEmpty && selectedHourIndex.value < listData.length)
-        ? listData[selectedHourIndex.value]
-        : HourlyItem.empty();
-  }
-
-  List<HourlyItem> getFilterWeather({int hourStep = 1, int? limit}) {
-    if (listData.isEmpty) return [];
-    List<HourlyItem> filterList = [];
-    int currentHour = (hourStep >= 24) ? 0 : DateTime.now().hour;
-
-    for (int i = currentHour; i < listData.length; i += hourStep) {
-      filterList.add(listData[i]);
-      if (limit != null && filterList.length == limit) break;
-    }
-    return filterList;
-  }
-
-  // --- Background Tasks ---
+  // --- Time Logic ---
 
   void _startGlobalTimer() {
     _globalTimer?.cancel();
     _globalTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      currentTime.value = DateFormat("hh:mm:ss a").format(DateTime.now());
+      _updateLocalTime();
 
-      // દર કલાકે ઓટો-રિફ્રેશ
+      // Auto-refresh logic every hour
       final now = DateTime.now();
       if (now.minute == 0 && now.second == 0) {
-        if (searchQuery.value.isEmpty) {
-          fetchWeatherByLocation();
-        } else {
-          searchByCity(searchQuery.value);
-        }
+        searchQuery.value.isEmpty
+            ? fetchWeatherByLocation()
+            : searchByCity(searchQuery.value);
       }
     });
   }
 
+  /// લોકલ અને સર્ચ કરેલા શહેરનો સમય ગણવાની મેથડ
+  void _updateLocalTime() {
+    // ૧. ઇન્ડિયા (Device) ટાઈમ
+    currentTime.value = DateFormat("hh:mm:ss a").format(now);
+
+    // ૨. ફોનનો પોતાનો ટાઈમઝોન ઓફસેટ મેળવો
+    int deviceOffset = now.timeZoneOffset.inSeconds;
+
+    // ૩. જો API નો ઓફસેટ તમારા ફોન કરતા અલગ હોય, તો જ બીજો ટાઈમ બતાવો
+    if (utcOffsetSecond.value != deviceOffset) {
+      DateTime nowUtc = DateTime.now().toUtc();
+      DateTime localDateTime = nowUtc.add(
+        Duration(seconds: utcOffsetSecond.value),
+      );
+
+      weatherCurrentTime.value = DateFormat("hh:mm:ss a").format(localDateTime);
+      print("Current Location Time : ${weatherCurrentTime.value}");
+      showLocalTime.value = true;
+    } else {
+      showLocalTime.value = false;
+    }
+  }
+
+  // --- UI Helpers ---
+
+  void getCityName(double lat, double long) async {
+    try {
+      List<geo.Placemark> placeMarks = await geo.placemarkFromCoordinates(
+        lat,
+        long,
+      );
+      if (placeMarks.isNotEmpty) {
+        geo.Placemark place = placeMarks[0];
+        searchController.text =
+            place.locality ?? place.administrativeArea ?? "Unknown";
+      }
+    } catch (e) {
+      log("Reverse Geocoding Error: $e");
+    }
+  }
+
+  List<HourlyItem> getFilterWeather({int hourStep = 1, int? limit}) {
+    if (listData.isEmpty) return [];
+
+    List<HourlyItem> filterList = [];
+
+    int currentHour = (hourStep >= 24) ? 0 : DateTime.now().hour;
+
+    for (int i = currentHour; i < listData.length; i += hourStep) {
+      filterList.add(listData[i]);
+
+      if (limit != null && filterList.length == limit) break;
+    }
+
+    return filterList;
+  }
+
   void _handleError(String message) {
     change(null, status: RxStatus.error(message));
-    Get.snackbar("Weather", message, snackPosition: SnackPosition.BOTTOM);
+    Get.snackbar(
+      "Weather Update",
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.redAccent.withOpacity(0.8),
+      colorText: Colors.white,
+    );
   }
-
-  @override
-  void onClose() {
-    _globalTimer?.cancel();
-    searchController.dispose();
-    super.onClose();
-  }
-
-  // --- Weather Condition Logic ---
 
   /// કોઈ પણ HourlyItem પરથી તેની WeatherCondition (Icon/Label) નક્કી કરવા માટે
+
   WeatherCondition getWeatherCondition(HourlyItem item) {
     if (item.time == null || item.time!.isEmpty) return WeatherCondition.clear;
 
@@ -197,22 +257,43 @@ class WeatherController extends GetxController
       return WeatherCondition.fromCode(item.weatherCode, isNight: isNight);
     } catch (e) {
       log("Error in getWeatherCondition: $e");
+
       return WeatherCondition.clear;
     }
   }
 
-  // --- Theme Logic ---
+  @override
+  void onClose() {
+    _globalTimer?.cancel();
+    searchController.dispose();
+    super.onClose();
+  }
+
+  void updateSelectedHour(int index) {
+    if (index >= 0 && index < listData.length) {
+      selectedHourIndex.value = index;
+    }
+  }
+
+  void clearSearch() {
+    searchController.clear();
+    searchQuery.value = "";
+  }
 
   WeatherTheme get currentTheme {
     final item = currentHourWeather;
+
     if (item.time == null || item.time!.isEmpty) return WeatherTheme.day;
 
     try {
       final hour = DateTime.parse(item.time!).hour;
+
       final code = item.weatherCode;
 
       if (hour >= 20 || hour < 5) return WeatherTheme.night;
+
       if (code >= 51 && code <= 99) return WeatherTheme.rainy;
+
       if ((hour >= 18 && hour < 20) || (hour >= 5 && hour < 7)) {
         return WeatherTheme.sunset;
       }

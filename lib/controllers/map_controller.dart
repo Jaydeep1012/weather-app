@@ -12,10 +12,16 @@ class AppMapController extends GetxController {
   final MapControllerImpl mapControllerImpl = MapControllerImpl();
   final LatLongServices _latLongServices = LatLongServices();
   RxList<Marker> markers = <Marker>[].obs;
+  RxBool isMapReady = false.obs;
 
   @override
   void onInit() {
     super.onInit();
+  }
+
+  @override
+  void onReady() {
+    super.onReady();
     setCurrentLocation();
   }
 
@@ -24,26 +30,31 @@ class AppMapController extends GetxController {
     Position? position = await _latLongServices.getCurrentLocation();
     if (position != null) {
       LatLng pos = LatLng(position.latitude, position.longitude);
-
-      mapControllerImpl.move(pos, 14);
-
-      markers.clear();
-      markers.add(
-        Marker(
-          point: pos,
-          width: 50.w,
-          height: 50.h,
-          child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-        ),
-      );
+      if (isMapReady.value) {
+        try {
+          mapControllerImpl.move(pos, 14);
+        } catch (e) {
+          print("MoveToLocation Error: $e");
+        }
+      }
     }
   }
 
   void moveToLocation(double lat, double long) {
     LatLng newPos = LatLng(lat, long);
-    mapControllerImpl.move(newPos, 14);
 
-    markers.clear();
+    // જો મેપ તૈયાર હોય તો જ મૂવ કરવો
+    if (isMapReady.value) {
+      try {
+        mapControllerImpl.move(newPos, 14);
+      } catch (e) {
+        print("Map Move Error: $e");
+      }
+    } else {
+      print("Map is not ready yet. Just updating variables.");
+    }
+
+    // માર્કર તો તમે ગમે ત્યારે અપડેટ કરી શકો છો, તેમાં એરર નહીં આવે
     markers.assignAll([
       Marker(
         point: newPos,
@@ -54,10 +65,7 @@ class AppMapController extends GetxController {
     ]);
   }
 
-  void handleMapOnTap(LatLng point) {
-    mapControllerImpl.move(point, 14);
-
-    markers.clear();
+  void updateMarker(LatLng point) {
     markers.assignAll([
       Marker(
         point: point,
@@ -66,8 +74,17 @@ class AppMapController extends GetxController {
         child: Icon(Icons.location_on, color: Colors.red, size: 40),
       ),
     ]);
+  }
+
+  void handleMapOnTap(LatLng point) {
+    if (isMapReady.value) {
+      mapControllerImpl.move(point, 14);
+    }
+    markers.clear();
+    updateMarker(point);
 
     final WeatherController weatherCtrl = Get.find<WeatherController>();
+    weatherCtrl.getCityName(point.latitude, point.longitude);
 
     /// on tap karse etle je te point parhi lat long select kari weather data get karse
     weatherCtrl.getApiCall(point.latitude, point.longitude);

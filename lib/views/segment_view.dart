@@ -2,7 +2,10 @@ import 'package:custom_sliding_segmented_control/custom_sliding_segmented_contro
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:weatherapp/core/constants/app_colors.dart';
+import 'package:weatherapp/core/utils/responsive%20helperclass.dart';
 import 'package:weatherapp/core/widgets/custom_icon.dart';
+import 'package:weatherapp/core/widgets/custom_text.dart';
 import 'package:weatherapp/core/widgets/custom_weatherScaffold.dart';
 
 import '../controllers/segment_controller.dart';
@@ -13,18 +16,26 @@ class SegmentView extends GetView<SegmentController> {
 
   @override
   Widget build(BuildContext context) {
+    // ૧. resUI ને એકવાર ડિક્લેર કરો
+    final resUI = AppSize(context);
+
     return WeatherScaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
         title: Obx(
           () => Text(
-            "${controller.titleBar.value} Weather Details",
-            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+            "${controller.titleBar.value} Weather",
+            style: TextStyle(
+              fontSize: resUI.normalFont,
+              fontWeight: FontWeight.bold,
+              color: AppColors.black,
+            ),
           ),
         ),
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.black),
           onPressed: () => Get.back(),
         ),
       ),
@@ -32,123 +43,161 @@ class SegmentView extends GetView<SegmentController> {
         (data) => SafeArea(
           child: Column(
             children: [
-              SizedBox(height: 10.h),
+              // ૨. સેગમેન્ટ સેક્શન (Responsive Height)
+              _buildSegmentSection(resUI),
 
-              // ૧. સેગમેન્ટ ટેબ્સ
-              SizedBox(
-                height: 55.h,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10.w),
-                  child: Obx(
-                    () => CustomSlidingSegmentedControl<int>(
-                      initialValue: controller.selectedSegment.value,
-                      children: {
-                        0: _buildTab(label: "2 Hour"),
-                        1: _buildTab(label: "4 Hour"),
-                        2: _buildTab(label: "6 Hour"),
-                        3: _buildTab(label: "8 Hour"),
-                        4: _buildTab(label: "12 Hour"),
-                      },
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(15.r),
-                      ),
-                      thumbDecoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: BorderRadius.circular(15.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      onValueChanged: (v) {
-                        // સેગમેન્ટ બદલાય ત્યારે કંટ્રોલરને અપડેટ કરો
-                        controller.updateSegment(v);
-                      },
-                    ),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 10.h),
-
-              // ૨. ફિલ્ટર થયેલું લિસ્ટવ્યુ
+              // ૩. લિસ્ટવ્યુ (સીધું Expanded માં જેથી ParentData એરર ના આવે)
               Expanded(
                 child: ListView.builder(
-                  padding: EdgeInsets.only(bottom: 20.h),
-                  // 'data' ની લંબાઈ ઓટોમેટિકલી બદલાશે
+                  physics: const BouncingScrollPhysics(),
+                  padding:
+                      EdgeInsets.symmetric(vertical: 10.dg, horizontal: 5.dg),
                   itemCount: data?.length ?? 0,
                   itemBuilder: (context, index) {
-                    // લિસ્ટમાંથી એક આઈટમ મેળવો
-                    final HourlyItem item = data![index];
-                    return _buildForecastCard(item, index);
+                    return _buildForecastCard(data![index], index, resUI);
                   },
                 ),
               ),
             ],
           ),
         ),
-        // લોડિંગ સ્ટેટ માટે
-        onLoading: Center(child: CircularProgressIndicator()),
-        // એરર સ્ટેટ માટે
-        onError: (error) => Text(error ?? "કંઈક ખોટું થયું"),
-        // ખાલી સ્ટેટ માટે (જો change(data, status: RxStatus.empty()) કોલ થાય)
-        onEmpty: Text("કોઈ ડેટા ઉપલબ્ધ નથી"),
+        onLoading: const Center(child: CircularProgressIndicator()),
+        onError: (error) =>
+            Center(child: Text(error ?? "Something went wrong")),
+        onEmpty: const Center(child: Text("No weather data found")),
       ),
     );
   }
 
-  // ટેબ વીજેટ બનાવવા માટેનું સાદું ફંક્શન
-  Widget _buildTab({required String label}) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8.h),
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+  // --- હેલ્પર મેથડ: સેગમેન્ટ સેક્શન ---
+  Widget _buildSegmentSection(AppSize resUI) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.dg, vertical: 5.dg),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(resUI.borderRadius ?? 12.dg),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Obx(
+            () => CustomSlidingSegmentedControl<int>(
+              key: ValueKey(resUI.isLandscape), // ઓરિએન્ટેશન બદલાતા રિફ્રેશ થશે
+              fixedWidth: resUI.segmentWidth,
+
+              initialValue: controller.selectedSegment.value,
+              children: {
+                0: _buildTab(label: "2 Hour", res: resUI),
+                1: _buildTab(label: "4 Hour", res: resUI),
+                2: _buildTab(label: "6 Hour", res: resUI),
+                3: _buildTab(label: "8 Hour", res: resUI),
+                4: _buildTab(label: "12 Hour", res: resUI),
+              },
+              decoration: BoxDecoration(
+                color: Colors.transparent, // મેઈન કન્ટેનરનો કલર લેશે
+                borderRadius:
+                    BorderRadius.circular(resUI.borderRadius ?? 12.dg),
+              ),
+              thumbDecoration: BoxDecoration(
+                color: AppColors.prim,
+                borderRadius:
+                    BorderRadius.circular(resUI.borderRadius ?? 12.dg),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(.05),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              onValueChanged: (v) => controller.updateSegment(v),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  // ૩. લિસ્ટ આઈટમ માટે પ્રોફેશનલ કાર્ડ (તમારું કોમન વીજેટ)
-  Widget _buildForecastCard(HourlyItem getHour, int index) {
+  // --- હેલ્પર મેથડ: ટેબ બિલ્ડર ---
+  Widget _buildTab({required String label, required AppSize res}) {
+    return Container(
+      width: res.segmentWidth,
+      height: res.isLandscape ? 40.dg : 50.dg,
+      alignment: Alignment.center,
+      // પેડિંગ ડાયનેમિક રાખ્યું છે જેથી હાઈટ પ્રોપર રહે
+      child: CustomText(
+        text: label,
+        maxLine: 1,
+        fontSize: res.isLandscape ? 12.sp : 16.sp,
+        fontWeight: FontWeight.bold,
+        color: AppColors.black,
+        softWrap: false,
+        textOverflow: TextOverflow.clip,
+      ),
+    );
+  }
+
+  // --- હેલ્પર મેથડ: ફોરકાસ્ટ કાર્ડ ---
+  Widget _buildForecastCard(HourlyItem item, int index, AppSize resUI) {
+    // resUI ને ફરીથી નલ-ચેક ના કરવો પડે એટલે લોકલ વેરીએબલ
+    final res = resUI;
     final condition = controller.itemConditions[index];
 
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 15.w, vertical: 6.h),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      margin: EdgeInsets.symmetric(horizontal: 10.dg, vertical: 6.dg),
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(res.borderRadius ?? 12.dg),
+        side: BorderSide(color: Colors.grey.shade100),
+      ),
       child: ListTile(
-        contentPadding: EdgeInsets.all(12.w),
+        contentPadding: EdgeInsets.symmetric(horizontal: 15.dg, vertical: 8.dg),
         leading: Container(
-          padding: EdgeInsets.all(8.w),
+          padding: EdgeInsets.all(8.dg),
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
+            color: AppColors.prim.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: CustomImage(imagePath: condition?.imagePath ?? ""),
+          child: CustomImage(
+            imagePath: condition?.imagePath ?? "assets/images/default.png",
+            height: res.weatherImg,
+            width: res.weatherImg,
+          ),
         ),
         title: Text(
-          "${getHour.temperature2M}°C",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.sp),
+          "${item.temperature2M}°C",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: res.normalFont,
+          ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Humidity: ${getHour.relativeHumidity2M}%"),
-            Text(
-              getHour.fullDateTime,
-              style: TextStyle(color: Colors.grey, fontSize: 12.sp),
-            ),
-          ],
+        subtitle: Padding(
+          padding: EdgeInsets.only(top: 4.dg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CustomText(
+                text: "Humidity: ${item.relativeHumidity2M}%",
+                fontSize: res.normalFont! * 0.9,
+                color: Colors.grey.shade700,
+              ),
+              Text(
+                item.fullDateTime,
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: res.normalFont! * 0.8,
+                ),
+              ),
+            ],
+          ),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Icon(
+          Icons.arrow_forward_ios_rounded,
+          size: res.iconSize,
+          color: Colors.grey,
+        ),
       ),
     );
   }

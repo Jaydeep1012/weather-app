@@ -23,7 +23,7 @@ class WeatherServices {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print("Weather Data :$data}");
+
         return WeatherModel.fromJson(data);
       } else {
         print("Server Error: ${response.statusCode}");

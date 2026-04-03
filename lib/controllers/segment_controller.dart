@@ -48,9 +48,7 @@ class SegmentController extends GetxController
 
     /// current date get
     final DateTime now = DateTime.now();
-
-    final bool isToday =
-        tappedDate.year == now.year &&
+    final bool isToday = tappedDate.year == now.year &&
         tappedDate.month == now.month &&
         tappedDate.day == now.day;
 
@@ -95,6 +93,8 @@ class SegmentController extends GetxController
       4: {"step": 12, "limit": 2},
     };
     return configs[selectedSegment.value] ?? {"step": 2, "limit": 12};
+
+    /// default step 2 selected show
   }
 
   void loadFilteredData() {
@@ -120,8 +120,7 @@ class SegmentController extends GetxController
       // Start Index શોધવું
       int startIndex = _homeController.listData.indexWhere((item) {
         DateTime itemDate = DateTime.parse(item.time!);
-        bool isSameDay =
-            itemDate.year == tappedDate.year &&
+        bool isSameDay = itemDate.year == tappedDate.year &&
             itemDate.month == tappedDate.month &&
             itemDate.day == tappedDate.day;
 

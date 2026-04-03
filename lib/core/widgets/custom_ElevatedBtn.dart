@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:weatherapp/core/constants/app_colors.dart';
@@ -18,8 +17,9 @@ class CustomElevatedBtn extends StatelessWidget {
   final String? fontFamily;
   final FontStyle? fontStyle;
   final VoidCallback onTap;
-final double? width;
-final double? height;
+  final double? width;
+  final double? height;
+  final TextAlign? textAlign;
   const CustomElevatedBtn({
     super.key,
     required this.text,
@@ -33,16 +33,19 @@ final double? height;
     this.fontFamily,
     this.fontStyle,
     required this.onTap,
-    this.icon, this.width,
-    this.height
+    this.icon,
+    this.width,
+    this.height,
+    this.textAlign,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox( width: width ?? 200.w,
+    return SizedBox(
+      width: width ?? 200.w,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          minimumSize: Size( width ?? 200.w,  height ?? 40.h),
+          minimumSize: Size(width ?? 200.w, height ?? 40.h),
           backgroundColor: bgColor ?? AppColors.gray,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadiusGeometry.circular(16.r),
@@ -54,18 +57,18 @@ final double? height;
         child: Row(
           children: [
             Icon == null
-               ?  SizedBox.shrink()
-            : Icon(
+                ? SizedBox.shrink()
+                : Icon(
                     icon,
                     weight: iconWeight ?? 400,
                     size: 20.sp,
                     color: iconColor ?? AppColors.white,
                   ),
 
-
             SizedBox(width: 4.w),
             Text(
               text,
+              textAlign: TextAlign.start,
               style: TextStyle(
                 fontWeight: fontWeight ?? FontWeight.normal,
                 fontSize: fontSize ?? 16.sp,

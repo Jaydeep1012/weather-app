@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:weatherapp/core/constants/app_colors.dart';
+import 'package:weatherapp/core/constants/image_assets.dart';
 import 'package:weatherapp/core/utils/responsive%20helperclass.dart';
 import 'package:weatherapp/core/widgets/custom_icon.dart';
 import 'package:weatherapp/core/widgets/custom_text.dart';
@@ -16,7 +17,7 @@ class SegmentView extends GetView<SegmentController> {
 
   @override
   Widget build(BuildContext context) {
-    // ૧. resUI ને એકવાર ડિક્લેર કરો
+    ///    final controller = SegmentController.to;
     final resUI = AppSize(context);
 
     return WeatherScaffold(
@@ -43,10 +44,7 @@ class SegmentView extends GetView<SegmentController> {
         (data) => SafeArea(
           child: Column(
             children: [
-              // ૨. સેગમેન્ટ સેક્શન (Responsive Height)
               _buildSegmentSection(resUI),
-
-              // ૩. લિસ્ટવ્યુ (સીધું Expanded માં જેથી ParentData એરર ના આવે)
               Expanded(
                 child: ListView.builder(
                   physics: const BouncingScrollPhysics(),
@@ -69,8 +67,10 @@ class SegmentView extends GetView<SegmentController> {
     );
   }
 
-  // --- હેલ્પર મેથડ: સેગમેન્ટ સેક્શન ---
-  Widget _buildSegmentSection(AppSize resUI) {
+  Widget _buildSegmentSection(
+    AppSize resUI,
+  ) {
+    /// final controller = SegmentController.to;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 20.dg, vertical: 5.dg),
       child: Container(
@@ -84,9 +84,8 @@ class SegmentView extends GetView<SegmentController> {
           physics: const BouncingScrollPhysics(),
           child: Obx(
             () => CustomSlidingSegmentedControl<int>(
-              key: ValueKey(resUI.isLandscape), // ઓરિએન્ટેશન બદલાતા રિફ્રેશ થશે
+              key: ValueKey(resUI.isLandscape),
               fixedWidth: resUI.segmentWidth,
-
               initialValue: controller.selectedSegment.value,
               children: {
                 0: _buildTab(label: "2 Hour", res: resUI),
@@ -96,7 +95,7 @@ class SegmentView extends GetView<SegmentController> {
                 4: _buildTab(label: "12 Hour", res: resUI),
               },
               decoration: BoxDecoration(
-                color: Colors.transparent, // મેઈન કન્ટેનરનો કલર લેશે
+                color: Colors.transparent,
                 borderRadius:
                     BorderRadius.circular(resUI.borderRadius ?? 12.dg),
               ),
@@ -120,28 +119,25 @@ class SegmentView extends GetView<SegmentController> {
     );
   }
 
-  // --- હેલ્પર મેથડ: ટેબ બિલ્ડર ---
   Widget _buildTab({required String label, required AppSize res}) {
     return Container(
       width: res.segmentWidth,
       height: res.isLandscape ? 40.dg : 50.dg,
       alignment: Alignment.center,
-      // પેડિંગ ડાયનેમિક રાખ્યું છે જેથી હાઈટ પ્રોપર રહે
       child: CustomText(
         text: label,
         maxLine: 1,
         fontSize: res.isLandscape ? 12.sp : 16.sp,
         fontWeight: FontWeight.bold,
-        color: AppColors.black,
+        fontColor: AppColors.black,
         softWrap: false,
         textOverflow: TextOverflow.clip,
       ),
     );
   }
 
-  // --- હેલ્પર મેથડ: ફોરકાસ્ટ કાર્ડ ---
   Widget _buildForecastCard(HourlyItem item, int index, AppSize resUI) {
-    // resUI ને ફરીથી નલ-ચેક ના કરવો પડે એટલે લોકલ વેરીએબલ
+    ///  final controller = SegmentController.to;
     final res = resUI;
     final condition = controller.itemConditions[index];
 
@@ -161,7 +157,7 @@ class SegmentView extends GetView<SegmentController> {
             shape: BoxShape.circle,
           ),
           child: CustomImage(
-            imagePath: condition?.imagePath ?? "assets/images/default.png",
+            imagePath: condition?.imagePath ?? ImageAssets.byDefault,
             height: res.weatherImg,
             width: res.weatherImg,
           ),
@@ -181,7 +177,7 @@ class SegmentView extends GetView<SegmentController> {
               CustomText(
                 text: "Humidity: ${item.relativeHumidity2M}%",
                 fontSize: res.normalFont! * 0.9,
-                color: Colors.grey.shade700,
+                fontColor: Colors.grey.shade700,
               ),
               Text(
                 item.fullDateTime,

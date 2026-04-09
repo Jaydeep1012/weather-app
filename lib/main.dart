@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
-//import 'package:timezone/browser.dart' as tz;
 import 'package:weatherapp/bindings/weather_binding.dart';
 import 'package:weatherapp/core/constants/app_colors.dart';
 
@@ -10,7 +9,7 @@ import 'core/routes/app_routes.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // tz.initializeTimeZone();
+
   runApp(const MyApp());
 }
 

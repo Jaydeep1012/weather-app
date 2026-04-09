@@ -7,7 +7,7 @@ class CustomText extends StatelessWidget {
   final String text;
   final double? fontSize;
   final FontWeight? fontWeight;
-  final Color? color;
+  final Color? fontColor;
   final TextAlign? textAlign;
   final FontStyle? fontStyle;
   final String? fontFamily;
@@ -25,7 +25,7 @@ class CustomText extends StatelessWidget {
     required this.text,
     this.fontSize,
     this.fontWeight,
-    this.color,
+    this.fontColor,
     this.textAlign,
     this.fontStyle,
     this.fontFamily,
@@ -49,7 +49,7 @@ class CustomText extends StatelessWidget {
       style: TextStyle(
         fontSize: fontSize ?? 16.sp,
         fontWeight: fontWeight ?? FontWeight.normal,
-        color: color ?? AppColors.white,
+        color: fontColor ?? AppColors.white,
         fontStyle: fontStyle,
         fontFamily: fontFamily,
         height: 0.8.sp,

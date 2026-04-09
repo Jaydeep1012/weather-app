@@ -15,12 +15,11 @@ import 'package:weatherapp/core/widgets/custom_weatherScaffold.dart';
 import '../core/widgets/custom_search.dart';
 
 class HomeScreen extends StatelessWidget {
-  final WeatherController controller = Get.find<WeatherController>();
-
-  HomeScreen({super.key});
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = WeatherController.to;
     final resUI = context.appRes;
 
     return WeatherScaffold(
@@ -34,10 +33,9 @@ class HomeScreen extends StatelessWidget {
         // ૪. Empty State (જો ડેટા ન મળે ત્યારે) - Optional
         onEmpty: const Center(child: Text("Data Not available")),
         (data) {
+          /// current location made
           return RefreshIndicator(
-            onRefresh: () => controller.fetchWeatherByLocation(),
-
-            /// current location made
+            onRefresh: () async => await controller.clearSearch(),
             child: SingleChildScrollView(
               physics: AlwaysScrollableScrollPhysics(),
               child: Column(
@@ -52,24 +50,26 @@ class HomeScreen extends StatelessWidget {
                         borderRadius: resUI.borderRadius,
                         defaultGradient: false,
                         color: AppColors.white.withOpacity(0.3),
-                        child: Obx(
-                          () => CustomSearch(
-                            textEditingController: controller.searchController,
-                            hintText: "Search Location",
+                        child: CustomSearch(
+                          textEditingController: controller.searchController,
+                          hintText: "Search Location",
 
-                            prefixIcon: Icons.search,
-                            suffixIcon: controller.searchQuery.value.isNotEmpty
-                                ? Icons.close
-                                : null,
+                          prefixIcon: Icons.search,
+                          suffixIcon: Icons.close,
 
-                            onTap: () => controller.clearSearch(),
-                            onChange: (v) => controller.searchQuery.value = v,
-                            onSubmit: (value) => controller.searchByCity(value),
-                            keyboardType: TextInputType.text,
-                            textInputAction: TextInputAction.search,
+                          onTap: () => controller.clearSearch(),
+                          onChange: (v) => controller.searchQuery.value = v,
+                          onSubmit: (value) {
+                            if (value.isNotEmpty) {
+                              controller.searchByCity(value);
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              controller.clearSearch();
+                            }
+                          },
+                          keyboardType: TextInputType.text,
+                          textInputAction: TextInputAction.search,
 
-                            /// keyboard na search par tap kare to search action execute thay
-                          ),
+                          /// keyboard na search par tap kare to search action execute thay
                         ),
                       ),
                     ),
@@ -78,7 +78,7 @@ class HomeScreen extends StatelessWidget {
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16.dg),
                     child: Obx(() {
-                      final listD = controller.listData;
+                      //  final listD = controller.listData;
 
                       /// getter call here
                       final currentData = controller.currentHourWeather;
@@ -96,41 +96,43 @@ class HomeScreen extends StatelessWidget {
                                 () => Column(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
-                                  mainAxisSize: MainAxisSize
-                                      .min, // કોલમ જરૂર જેટલી જ જગ્યા રોકશે
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     CustomText(
-                                      text: "${currentData.temperature2M}",
+                                      text:
+                                          "  ${currentData.temperature2M.round()}°C",
                                       //  height: 0.20,
                                       //"${listD[DateTime.now().hour].temperature2M}",
                                       fontSize: resUI.largeFont,
                                       fontWeight: FontWeight.w800,
-                                      color: AppColors.white.withValues(
+                                      fontColor: AppColors.white.withValues(
                                         alpha: 0.9,
-                                      ), // સફેદ બેકગ્રાઉન્ડ પર બ્લેક કલર રાખવો
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 5.dg,
                                     ),
                                     Align(
                                       alignment: Alignment.topRight,
                                       child: CustomText(
+                                        maxLine: 2,
                                         textAlign: TextAlign.right,
                                         text: controller
                                                 .searchQuery.value.isNotEmpty
                                             ? controller.searchQuery.value
-                                                .toUpperCase()
                                             : controller.searchController.text
                                                     .isNotEmpty
                                                 ? controller
                                                     .searchController.text
-                                                    .toUpperCase()
                                                 : "Mostly Clear",
-                                        color: AppColors.primary,
+                                        fontColor: AppColors.primary,
                                         fontSize: resUI.smallLargeFont,
                                         fontWeight: FontWeight.w500,
                                         leadingDistribution:
                                             TextLeadingDistribution.even,
                                       ),
                                     ),
-                                    SizedBox(height: 15.dg),
+                                    SizedBox(height: 20.dg),
                                     Align(
                                       alignment: Alignment.topRight,
                                       child: CustomText(
@@ -138,25 +140,31 @@ class HomeScreen extends StatelessWidget {
                                             "Current Time : ${controller.currentTime.value}",
                                         fontSize: resUI.normalFont,
                                         fontWeight: FontWeight.w600,
-                                        color: AppColors.white.withValues(
+                                        fontColor: AppColors.white.withValues(
                                           alpha: 0.6,
                                         ),
                                       ),
                                     ),
-                                    SizedBox(height: 6.dg),
-                                    if (controller.showLocalTime.value)
-                                      Align(
-                                        alignment: Alignment.topRight,
-                                        child: CustomText(
-                                          text:
-                                              "Weather Time : ${controller.weatherCurrentTime.value}",
-                                          fontSize: resUI.normalFont,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.white.withValues(
-                                            alpha: 0.6,
-                                          ),
-                                        ),
-                                      ),
+                                    SizedBox(height: 10.dg),
+                                    Align(
+                                      alignment: Alignment.topRight,
+                                      child: Obx(() {
+                                        if (controller.showLocalTime.value) {
+                                          return CustomText(
+                                            text:
+                                                "Weather Time : ${controller.weatherCurrentTime.value}",
+                                            fontSize: resUI.normalFont,
+                                            fontWeight: FontWeight.w600,
+                                            fontColor:
+                                                AppColors.white.withValues(
+                                              alpha: 0.6,
+                                            ),
+                                          );
+                                        } else {
+                                          return const SizedBox.shrink();
+                                        }
+                                      }),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -190,7 +198,7 @@ class HomeScreen extends StatelessWidget {
                           offset: const Offset(
                             0,
                             10,
-                          ), // Y ને વધારવાથી શેડો માત્ર નીચે જ દેખાશે
+                          ),
                         ),
                       ],
                       child: Padding(
@@ -206,18 +214,15 @@ class HomeScreen extends StatelessWidget {
                               _buildWeatherDetail(
                                   icon: Icons.umbrella,
                                   value:
-                                      "${currentData.first.temperature2M}  %", // અહીં તમારો વરસાદનો ડેટા મૂકો
+                                      "${currentData.first.temperature2M}  %",
                                   label: "Temperature",
                                   resUI: resUI),
-                              // ૨. ભેજ / Humidity Column
                               _buildWeatherDetail(
                                   icon: Icons.sunny,
                                   value:
                                       "${currentData.first.relativeHumidity2M} %",
                                   label: "Humidity",
                                   resUI: resUI),
-
-                              // ૩. પવન / Wind Speed Column
                               _buildWeatherDetail(
                                   icon: Icons.wind_power,
                                   value:
@@ -241,7 +246,6 @@ class HomeScreen extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // ListTile ને બદલે આ Row વાપરો
                             Padding(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 10.dg, vertical: 5.dg),
@@ -251,18 +255,18 @@ class HomeScreen extends StatelessWidget {
                                 children: [
                                   CustomText(
                                     text: "Today",
-                                    color: AppColors.black,
+                                    fontColor: AppColors.black,
                                     fontWeight: FontWeight.w600,
                                     fontSize: resUI.semiLargeFont,
                                   ),
                                   InkWell(
-                                    onTap: () => Get.toNamed(AppRoutes
-                                        .weatherDetail), // અથવા તમારી જે રૂટ હોય
+                                    onTap: () =>
+                                        Get.toNamed(AppRoutes.weatherDetail),
                                     child: Row(
                                       children: [
                                         CustomText(
-                                          text: "7-Day Forecasts",
-                                          color: AppColors.black,
+                                          text: "Hourly Forecasts",
+                                          fontColor: AppColors.black,
                                           fontSize: resUI.semiLargeFont,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -276,112 +280,100 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
                             SizedBox(
-                              // ૧. હાઈટને resUI માંથી લો (લેન્ડસ્કેપમાં એરર નહીં આવે)
                               height: resUI.hourlyListHeight,
                               child: Builder(
                                 builder: (context) {
                                   final hourlyList = controller
                                       .getFilterWeather(hourStep: 1, limit: 24);
+                                  return ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    physics: const BouncingScrollPhysics(),
+                                    itemCount: hourlyList.length,
+                                    itemBuilder: (context, index) {
+                                      final item = hourlyList[index];
+                                      final condition =
+                                          controller.getWeatherCondition(item);
 
-                                  return Expanded(
-                                    child: ListView.builder(
-                                      // ૨. Horizontal લિસ્ટમાં shrinkWrap ની જરૂર નથી
-                                      scrollDirection: Axis.horizontal,
-                                      // ૩. યુઝર ૨૪ કલાકનું ડેટા સ્ક્ર્રોલ કરી શકે તે માટે BouncingPhysics
-                                      physics: const BouncingScrollPhysics(),
-                                      itemCount: hourlyList.length,
-                                      itemBuilder: (context, index) {
-                                        final item = hourlyList[index];
-                                        final condition = controller
-                                            .getWeatherCondition(item);
+                                      return Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 4.dg,
+                                          vertical: 10.dg,
+                                        ),
+                                        child: Obx(() {
+                                          final isSelected = controller
+                                                  .selectedHourIndex.value ==
+                                              index;
 
-                                        return Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 4.dg, // આડું પેડિંગ
-                                            vertical: 10.dg, // ઉભું પેડિંગ
-                                          ),
-                                          child: Obx(() {
-                                            final isSelected = controller
-                                                    .selectedHourIndex.value ==
-                                                index;
-
-                                            return InkWell(
-                                              // ૪. ક્લિક ઈફેક્ટ કન્ટેનરની બહાર ના જાય તે માટે BorderRadius
-                                              onTap: () {
-                                                controller.updateSelectedHour(
-                                                  index,
-                                                );
-                                                Get.toNamed(
-                                                  AppRoutes.weatherDetail,
-                                                  arguments: item,
-                                                );
-                                              },
-                                              child: CustomContainer(
-                                                borderRadius:
-                                                    resUI.borderRadius,
-                                                gradient: isSelected
-                                                    ? AppColors.selected
-                                                    : AppColors.unSelected,
-                                                border: Border.all(
-                                                  color: isSelected
-                                                      ? AppColors.white
-                                                      : AppColors.white
-                                                          .withOpacity(0.5),
-                                                ),
-                                                child: Column(
-                                                  // ફેરફાર ૧: આ લાઈન ઉમેરો, જેથી Column વધારાની જગ્યા ના રોકે
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .center, // center રાખવાથી કન્ટેન્ટ ભેગું રહેશે
-                                                  children: [
-                                                    // સમય
-                                                    FittedBox(
-                                                      child: CustomText(
-                                                        text: item.timeOnly,
-                                                        fontSize:
-                                                            resUI.normalFont,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                    SizedBox(
-                                                      height: 5.dg,
-                                                    ),
-                                                    // વેધર ઈમેજ
-                                                    Flexible(
-                                                      child: CustomImage(
-                                                        imagePath:
-                                                            condition.imagePath,
-                                                        // ફેરફાર ૩: ઈમેજની સાઈઝ મેન્યુઅલી થોડી ઘટાડીને ચેક કરો (દા.ત. 25.dg)
-                                                        width: resUI.weatherImg,
-                                                        height:
-                                                            resUI.weatherImg,
-                                                      ),
-                                                    ),
-                                                    SizedBox(
-                                                      height: 5.dg,
-                                                    ),
-                                                    // તાપમાન
-                                                    FittedBox(
-                                                      child: CustomText(
-                                                        text:
-                                                            "${item.temperature2M?.toStringAsFixed(0)}°C",
-                                                        fontSize:
-                                                            resUI.normalFont,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                          return InkWell(
+                                            onTap: () {
+                                              controller.updateSelectedHour(
+                                                index,
+                                              );
+                                              Get.toNamed(
+                                                AppRoutes.weatherDetail,
+                                                arguments: item,
+                                              );
+                                            },
+                                            child: CustomContainer(
+                                              borderRadius: resUI.borderRadius,
+                                              gradient: isSelected
+                                                  ? AppColors.selected
+                                                  : AppColors.unSelected,
+                                              border: Border.all(
+                                                color: isSelected
+                                                    ? AppColors.white
+                                                    : AppColors.white
+                                                        .withOpacity(0.5),
                                               ),
-                                            );
-                                          }),
-                                        );
-                                      },
-                                    ),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  // સમય
+                                                  FittedBox(
+                                                    child: CustomText(
+                                                      text: item.getLocalTime(),
+                                                      fontSize:
+                                                          resUI.normalFont,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    height: 5.dg,
+                                                  ),
+
+                                                  /// weather image
+                                                  Flexible(
+                                                    child: CustomImage(
+                                                      imagePath:
+                                                          condition.imagePath,
+                                                      width: resUI.weatherImg,
+                                                      height: resUI.weatherImg,
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    height: 5.dg,
+                                                  ),
+                                                  // તાપમાન
+                                                  FittedBox(
+                                                    child: CustomText(
+                                                      text:
+                                                          "${item.temperature2M}°C",
+                                                      fontSize:
+                                                          resUI.normalFont,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                      );
+                                    },
                                   );
                                 },
                               ),
@@ -406,7 +398,7 @@ class HomeScreen extends StatelessWidget {
                             child: CustomText(
                               textAlign: TextAlign.left,
                               text: "\t\t Maps",
-                              color: AppColors.black,
+                              fontColor: AppColors.black,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -426,10 +418,14 @@ class HomeScreen extends StatelessWidget {
                                       fontSize: resUI.semiLargeFont,
                                       fontWeight: FontWeight.bold,
                                     ),
-                                    Image.asset(
-                                      ImageAssets.mapImg,
-                                      width: resUI.imageSize,
-                                      height: resUI.imageSize,
+                                    Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 10.dg),
+                                      child: Image.asset(
+                                        ImageAssets.mapImg,
+                                        width: resUI.imageSize,
+                                        height: resUI.imageSize,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -450,7 +446,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// કોડને ક્લીન રાખવા માટે આ નાનું ફંક્શન વાપરો
 Widget _buildWeatherDetail(
     {required IconData icon,
     String? image,
@@ -476,12 +471,12 @@ Widget _buildWeatherDetail(
       SizedBox(height: 10.dg),
       CustomText(
         text: value,
-        color: AppColors.black,
+        fontColor: AppColors.black,
         fontSize: resUI?.normalFont,
         fontWeight: FontWeight.w500,
       ),
       CustomText(
-          text: label, color: AppColors.gray, fontSize: resUI?.normalFont),
+          text: label, fontColor: AppColors.gray, fontSize: resUI?.normalFont),
     ],
   );
 }

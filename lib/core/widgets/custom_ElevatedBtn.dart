@@ -51,21 +51,20 @@ class CustomElevatedBtn extends StatelessWidget {
             borderRadius: BorderRadiusGeometry.circular(16.r),
           ),
         ),
-
         onPressed: onTap,
-
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon == null
-                ? SizedBox.shrink()
-                : Icon(
-                    icon,
-                    weight: iconWeight ?? 400,
-                    size: 20.sp,
-                    color: iconColor ?? AppColors.white,
-                  ),
-
-            SizedBox(width: 4.w),
+            if (icon != null) ...[
+              Icon(
+                icon,
+                weight: iconWeight ?? 400,
+                size: 20.sp,
+                color: iconColor ?? AppColors.white,
+              ),
+              SizedBox(width: 4.w),
+            ],
             Text(
               text,
               textAlign: TextAlign.start,

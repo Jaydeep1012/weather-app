@@ -6,12 +6,10 @@ import '../models/weatherModel.dart';
 
 class WeatherDetailsController extends GetxController
     with StateMixin<List<HourlyItem>> {
-  // Singleton pattern for easy access (If needed)
-  static WeatherDetailsController get to =>
-      Get.find<WeatherDetailsController>();
-
   // ૧. Dependency Injection (Using underscore for private instance)
-  final WeatherController _homeController = Get.find<WeatherController>();
+
+  static WeatherDetailsController get to => Get.find();
+  final _homeController = WeatherController.to;
 
   // ૨. Reactive Variables (Rx)
   final RxList<HourlyItem> dayDataList = <HourlyItem>[].obs;
@@ -21,7 +19,6 @@ class WeatherDetailsController extends GetxController
   // Late variable for passed data
   late HourlyItem selectedWeather;
 
-  // ૩. Getters - logic ને build method થી દૂર રાખવા માટે
   int get currentSelectedIndex => _homeController.selectedHourIndex.value;
 
   HourlyItem? get activeDisplayData {
@@ -62,16 +59,13 @@ class WeatherDetailsController extends GetxController
     try {
       change(null, status: RxStatus.loading());
 
-      // ૨૪ કલાકના સ્ટેપ મુજબ દિવસો ગણવા (Professional math calculation)
       final int totalDays = (_homeController.listData.length / 24).floor();
 
-      // HomeController ની મેથડ દ્વારા ફિલ્ટર કરેલો ડેટા મેળવો
       final List<HourlyItem> filteredData = _homeController.getFilterWeather(
         hourStep: 24,
         limit: totalDays,
       );
 
-      // .assignAll() એ RxList ને અપડેટ કરવાની સાચી રીત છે (it triggers UI refresh)
       dayDataList.assignAll(filteredData);
 
       if (filteredData.isNotEmpty) {
@@ -89,21 +83,19 @@ class WeatherDetailsController extends GetxController
   }
 
   // ૬. UI Actions & Handlers
-
-  /// દિવસ બદલાય ત્યારે index અપડેટ કરવા માટે
+  /// day change then index change
   void onForecastTileTap(int index) {
     _homeController.updateSelectedHour(index);
-    // જો તમે ઈચ્છો તો અહીંથી બીજા UI ફેરફારો પણ કરી શકો
   }
 
-  /// WeatherCondition મેળવવા માટે (Delegation pattern)
+  ///for get WeatherCondition  (Delegation pattern)
   WeatherCondition getWeatherCondition(HourlyItem item) {
     return _homeController.getWeatherCondition(item);
   }
 
-  /// Segment બદલવા માટે
+  ///for Change Segment
   void onSegmentChanged(int index) {
-    if (selectedSegment.value == index) return; // જો સેમ હોય તો ફરી લોડ ન કરવું
+    if (selectedSegment.value == index) return;
     selectedSegment.value = index;
     fetchForecastData();
   }

@@ -40,12 +40,12 @@ class AppSize {
       16.sp;
   double? get largeFont =>
       context.res(
-        mobile: 60.sp,
-        mobileLandscape: 65.sp,
-        tablet: 90.sp,
-        tabletLandscap: 100.sp,
+        mobile: 50.sp,
+        mobileLandscape: 50.sp,
+        tablet: 60.sp,
+        tabletLandscap: 60.sp,
       ) ??
-      60.sp;
+      50.sp;
   double? get smallLargeFont =>
       context.res(
         mobile: 32.sp,
@@ -90,9 +90,9 @@ class AppSize {
 
   double? get sunImg => context.res(
         mobile: 100.dg,
-        mobileLandscape: 140.dg,
-        tablet: 200.dg,
-        tabletLandscap: 180.dg,
+        mobileLandscape: 100.dg,
+        tablet: 140.dg,
+        tabletLandscap: 140.dg,
       );
 
   /// position image mate .w, .dg no used na karvu normapdouble number used karisu
@@ -106,7 +106,7 @@ class AppSize {
       -15.dg;
   double? get sunImgPosition =>
       context.res(
-        mobile: 5.dg,
+        mobile: 2.dg,
         mobileLandscape: 80.dg,
         tablet: 10.dg,
         tabletLandscap: 100.dg,

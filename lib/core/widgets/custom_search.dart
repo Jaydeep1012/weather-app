@@ -43,8 +43,8 @@ class CustomSearch extends StatelessWidget {
       onSubmitted: onSubmit,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
-      textAlign: textAlign ?? TextAlign.start,
 
+      textAlign: textAlign ?? TextAlign.start,
       // ટેક્સ્ટની સ્ટાઇલ પ્રોફેશનલ રાખવા માટે
       style: TextStyle(
         fontSize: fontSize ?? 16.sp,

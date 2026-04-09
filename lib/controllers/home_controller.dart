@@ -3,10 +3,8 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart' as geo;
-import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-//import 'package:timezone/browser.dart' as tz;
 import 'package:weatherapp/controllers/map_controller.dart';
 
 import '../core/constants/image_assets.dart';
@@ -17,134 +15,134 @@ import 'currentlocation_controller.dart' show LocationController;
 
 class WeatherController extends GetxController
     with StateMixin<List<HourlyItem>> {
-  // Services
-  final WeatherServices _weatherServices = WeatherServices();
-  final LocationController locationController = Get.put(LocationController());
-  final TextEditingController searchController = TextEditingController();
+  static WeatherController get to => Get.isRegistered<WeatherController>()
+      ? Get.find<WeatherController>()
+      : Get.put(WeatherController());
 
-  // Observable Variables
+  /// Services & Controllers
+  final WeatherServices _weatherServices = WeatherServices();
+  final locationController = Get.put(LocationController());
+  final TextEditingController searchController = TextEditingController();
+  AppMapController get appMapCtrl => Get.find<AppMapController>();
+
+  /// Observable Variables
   final Rxn<WeatherModel> weather = Rxn<WeatherModel>();
   final RxList<HourlyItem> listData = <HourlyItem>[].obs;
-
-  // Time Variables
-  final RxString currentTime = "".obs; // Device (India) Time
-  final RxString weatherCurrentTime = "".obs; // Searched Location Time
-  final RxBool showLocalTime = false.obs; // Flag to show/hide extra time
-  final RxInt utcOffsetSecond = 19800.obs; // Default to India Offset (5.5 hrs)
-  final weatherModel = Rxn<WeatherModel>();
-
-  /// required parameter hoy to WeatherModel model ne aa type declare karo
+  final RxString currentTime = "".obs;
+  final RxString weatherCurrentTime = "".obs;
+  var isSearch = false.obs;
   final RxString searchQuery = "".obs;
-  final RxBool isLoading = false.obs;
+  final RxInt utcOffsetSecond = 19800.obs;
   final RxInt selectedHourIndex = DateTime.now().hour.obs;
-  final now = DateTime.now();
+  final RxBool showLocalTime = false.obs;
 
+  DateTime? weatherCurrentDateTime;
   Timer? _globalTimer;
 
   @override
   void onInit() {
     super.onInit();
 
+    /// Initially Load
     _startGlobalTimer();
-    fetchWeatherByLocation(); // Initial Load
+    fetchWeatherByLocation();
   }
 
-  /// create getter
+  /// create getter for current hour
   HourlyItem get currentHourWeather {
-    int hour = DateTime.now().hour;
-    return (listData.isNotEmpty && listData.length > hour)
-        ? listData[hour]
-        : HourlyItem.empty();
+    int hour = weatherCurrentDateTime?.hour ?? DateTime.now().hour;
+    if (listData.isEmpty) return HourlyItem.empty();
+    return listData.length > hour ? listData[hour] : listData.first;
   }
 
-  // --- API Methods ---
-
-  /// GPS દ્વારા વેધર ફેચ કરવું
+  /// API Methods
+  /// weather data fetch using GPS
   Future<void> fetchWeatherByLocation() async {
     try {
-      isLoading.value = true;
-      change(null, status: RxStatus.loading());
+      if (weather.value == null) change(null, status: RxStatus.loading());
 
-      Position? position = await locationController.getCurrentLocation();
+      /// GPS Location get
+      final position = await locationController.getCurrentLocation();
+
       if (position != null) {
-        searchQuery.value = "";
+        /// Reset for GPS
         await getApiCall(position.latitude, position.longitude);
+        List<geo.Placemark> placeMarks = await geo.placemarkFromCoordinates(
+            position.latitude, position.longitude);
+
+        if (placeMarks.isNotEmpty) {
+          String currentCity = placeMarks.first.locality ??
+              placeMarks.first.subAdministrativeArea ??
+              "";
+
+          //  searchController.text = currentCity;
+          searchQuery.value = currentCity;
+
+          /// current location par map move thase
+          appMapCtrl.updateLocationAndWeather(
+              position.latitude, position.longitude);
+        }
       } else {
-        _handleError("Location access denied.");
+        await searchByCity("asd");
       }
     } catch (e) {
-      _handleError("Location Error: $e");
-    } finally {
-      isLoading.value = false;
+      _handleError("Location Access Error");
     }
   }
 
-  void updateLocalTime(String timeZoneName) {
-    try {
-      // var location = tz.getLocation(timeZoneName);
-      // var nowTime = tz.TZDateTime.now(location);
-      weatherCurrentTime.value = DateFormat("hh:mm a").format(now);
-    } catch (e) {
-      /// જો એરર આવે તો ડિફોલ્ટ UTC ટાઈમ બતાવો
-      weatherCurrentTime.value = DateFormat(
-        'hh:mm a',
-      ).format(DateTime.now().toUtc());
-      print("Time Error show : $e");
-    }
-  }
-
-  /// શહેરના નામ દ્વારા સર્ચ કરવું
+  /// weather data search by city name
   Future<void> searchByCity(String cityName) async {
     if (cityName.isEmpty) return;
     try {
-      isLoading.value = true;
-      List<geo.Location> locations = await geo.locationFromAddress(cityName);
+      change(null, status: RxStatus.loading());
+      final locations = await geo.locationFromAddress(cityName);
 
       if (locations.isNotEmpty) {
         final loc = locations.first;
-        await getApiCall(loc.latitude, loc.longitude);
 
-        // અહીં '.value' વાપરજો જો તમે Rxn<WeatherModel> અથવા .obs વાપર્યું હોય
-        if (weatherModel.value != null &&
-            weatherModel.value!.timezone != null) {
-          updateLocalTime(weatherModel.value!.timezone!);
-        }
+        /// used location search kare
+        isSearch.value = true;
 
-        final mapCtrl = Get.find<AppMapController>();
-        if (mapCtrl.isMapReady.value) {
-          mapCtrl.moveToLocation(loc.latitude, loc.longitude);
-        }
-
+        /// search location name store kare
         searchQuery.value = cityName;
+
+        searchController.clear();
         FocusManager.instance.primaryFocus?.unfocus();
-        print("Search CITY Name :${searchQuery.value}");
+
+        /// map an Weather update kare
+        appMapCtrl.updateLocationAndWeather(loc.latitude, loc.longitude);
+
+        change(null, status: RxStatus.success());
       }
     } catch (e) {
       _handleError("City not found: $cityName");
-    } finally {
-      isLoading.value = false;
+      change(null, status: RxStatus.error(e.toString()));
     }
   }
 
-  /// મુખ્ય API ફંક્શન
+  Future<void> clearSearch() async {
+    isSearch.value = false;
+    searchController.clear();
+
+    await fetchWeatherByLocation();
+  }
+
+  /// API CALL
   Future<void> getApiCall(double lat, double long) async {
     try {
-      final apiResponse = await _weatherServices.fetchWeatherApi(
-        lat: lat,
-        long: long,
-      );
+      final apiResponse =
+          await _weatherServices.fetchWeatherApi(lat: lat, long: long);
 
       if (apiResponse != null) {
-        // ૧. ઓફસેટ અપડેટ કરો
-        utcOffsetSecond.value = apiResponse.utcOffsetSeconds ?? 19800;
+        _syncWeatherData(apiResponse);
 
-        // ૨. ડેટા સ્ટોર કરો
-        weather.value = apiResponse;
-        listData.assignAll(apiResponse.getItems);
-        selectedHourIndex.value = DateTime.now().hour;
-
-        // ૩. ટાઈમ તરત જ અપડેટ કરો (Timer ની રાહ જોયા વગર)
-        _updateLocalTime();
+        /// user input na kare to j current location show karavvu
+        if (searchController.text.isEmpty) {
+          getCityName(
+            lat,
+            long,
+          );
+        }
 
         change(listData, status: RxStatus.success());
       } else {
@@ -155,61 +153,61 @@ class WeatherController extends GetxController
     }
   }
 
-  // --- Time Logic ---
+  /// Helper Methods (Internal Logic)
+
+  void _syncWeatherData(WeatherModel response) {
+    utcOffsetSecond.value = response.utcOffsetSeconds;
+    weather.value = response;
+    listData.assignAll(response.getItems);
+    selectedHourIndex.value = DateTime.now().hour;
+    _updateAllTimers();
+  }
 
   void _startGlobalTimer() {
     _globalTimer?.cancel();
     _globalTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updateLocalTime();
+      _updateAllTimers();
 
-      // Auto-refresh logic every hour
+      /// Auto-refresh logic every hour
       final now = DateTime.now();
       if (now.minute == 0 && now.second == 0) {
-        searchQuery.value.isEmpty
+        searchQuery.isEmpty
             ? fetchWeatherByLocation()
             : searchByCity(searchQuery.value);
       }
     });
   }
 
-  /// લોકલ અને સર્ચ કરેલા શહેરનો સમય ગણવાની મેથડ
-  void _updateLocalTime() {
-    // ૧. ઇન્ડિયા (Device) ટાઈમ
+  void _updateAllTimers() {
+    final now = DateTime.now();
     currentTime.value = DateFormat("hh:mm:ss a").format(now);
 
-    // ૨. ફોનનો પોતાનો ટાઈમઝોન ઓફસેટ મેળવો
     int deviceOffset = now.timeZoneOffset.inSeconds;
-
-    // ૩. જો API નો ઓફસેટ તમારા ફોન કરતા અલગ હોય, તો જ બીજો ટાઈમ બતાવો
     if (utcOffsetSecond.value != deviceOffset) {
-      DateTime nowUtc = DateTime.now().toUtc();
-      DateTime localDateTime = nowUtc.add(
-        Duration(seconds: utcOffsetSecond.value),
-      );
-
+      final localDateTime =
+          DateTime.now().toUtc().add(Duration(seconds: utcOffsetSecond.value));
       weatherCurrentTime.value = DateFormat("hh:mm:ss a").format(localDateTime);
-      print("Current Location Time : ${weatherCurrentTime.value}");
+      weatherCurrentDateTime = localDateTime;
       showLocalTime.value = true;
     } else {
+      weatherCurrentDateTime = now;
       showLocalTime.value = false;
     }
   }
 
-  // --- UI Helpers ---
-
-  void getCityName(double lat, double long) async {
+  /// latLong thi City Name get karisakay
+  void getCityName(double lat, double long, {bool isFromMap = false}) async {
     try {
-      List<geo.Placemark> placeMarks = await geo.placemarkFromCoordinates(
-        lat,
-        long,
-      );
-      if (placeMarks.isNotEmpty) {
-        geo.Placemark place = placeMarks[0];
-        searchController.text =
-            place.locality ?? place.administrativeArea ?? "Unknown";
+      final marks = await geo.placemarkFromCoordinates(lat, long);
+      if (marks.isNotEmpty) {
+        /// city name get karva mate used thay se
+        String currentCity =
+            marks.first.locality ?? marks.first.subAdministrativeArea ?? "";
+
+        searchQuery.value = currentCity;
       }
     } catch (e) {
-      log("Reverse Geocoding Error: $e");
+      log("Geocoding Error: $e");
     }
   }
 
@@ -218,48 +216,17 @@ class WeatherController extends GetxController
 
     List<HourlyItem> filterList = [];
 
-    int currentHour = (hourStep >= 24) ? 0 : DateTime.now().hour;
+    // int currentHour = (hourStep >= 24) ? 0 : DateTime.now().hour;
 
-    for (int i = currentHour; i < listData.length; i += hourStep) {
+    int startHour = weatherCurrentDateTime?.hour ?? DateTime.now().hour;
+
+    for (int i = startHour; i < listData.length; i += hourStep) {
       filterList.add(listData[i]);
 
       if (limit != null && filterList.length == limit) break;
     }
 
     return filterList;
-  }
-
-  void _handleError(String message) {
-    change(null, status: RxStatus.error(message));
-    Get.snackbar(
-      "Weather Update",
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.redAccent.withOpacity(0.8),
-      colorText: Colors.white,
-    );
-  }
-
-  /// કોઈ પણ HourlyItem પરથી તેની WeatherCondition (Icon/Label) નક્કી કરવા માટે
-
-  WeatherCondition getWeatherCondition(HourlyItem item) {
-    if (item.time == null || item.time!.isEmpty) return WeatherCondition.clear;
-
-    try {
-      // ૧. ટાઈમ પાર્સ કરીને કલાક મેળવો
-      DateTime itemTime = DateTime.parse(item.time!);
-      int hour = itemTime.hour;
-
-      // ૨. રાતનું લોજિક (તમારા પ્રોજેક્ટ મુજબ): રાત્રે ૭ થી સવારે ૫
-      bool isNight = hour >= 19 || hour <= 5;
-
-      // ૩. તમારા Enum માંથી ડેટા મેળવો (weatherCode નો ઉપયોગ કરીને)
-      return WeatherCondition.fromCode(item.weatherCode, isNight: isNight);
-    } catch (e) {
-      log("Error in getWeatherCondition: $e");
-
-      return WeatherCondition.clear;
-    }
   }
 
   @override
@@ -275,9 +242,28 @@ class WeatherController extends GetxController
     }
   }
 
-  void clearSearch() {
-    searchController.clear();
-    searchQuery.value = "";
+  void _handleError(String message) {
+    change(null, status: RxStatus.error(message));
+    Get.snackbar("Weather Update", message,
+        snackPosition: SnackPosition.BOTTOM);
+  }
+
+  /// weather condition wise change theme///
+  WeatherCondition getWeatherCondition(HourlyItem item) {
+    if (item.time == null || item.time!.isEmpty) return WeatherCondition.clear;
+
+    try {
+      DateTime itemTime = DateTime.parse(item.time!);
+      int hour = itemTime.hour;
+
+      bool isNight = hour >= 19 || hour <= 5;
+
+      return WeatherCondition.fromCode(item.weatherCode, isNight: isNight);
+    } catch (e) {
+      log("Error in getWeatherCondition: $e");
+
+      return WeatherCondition.clear;
+    }
   }
 
   WeatherTheme get currentTheme {

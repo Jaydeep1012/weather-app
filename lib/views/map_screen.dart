@@ -7,22 +7,20 @@ import 'package:weatherapp/controllers/map_controller.dart';
 import 'package:weatherapp/core/routes/app_routes.dart';
 import 'package:weatherapp/core/widgets/custom_text.dart';
 
-import '../controllers/home_controller.dart';
 import '../core/constants/app_colors.dart';
 import '../core/utils/responsive helperclass.dart';
 import '../core/widgets/customContainer.dart';
 import '../core/widgets/custom_search.dart';
 
 class MapScreen extends StatefulWidget {
-  MapScreen({super.key});
+  const MapScreen({super.key});
 
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
 class _MapScreenState extends State<MapScreen> {
-  final AppMapController mapCtrl = Get.put(AppMapController());
-  final WeatherController controller = Get.find<WeatherController>();
+  final mapCtrl = AppMapController.to;
 
   @override
   Widget build(BuildContext context) {
@@ -41,11 +39,8 @@ class _MapScreenState extends State<MapScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // ૧. સર્ચ બાર (આખી જગ્યા રોકશે પણ લિમિટમાં)
                   Expanded(
-                    flex: context.isLandscape
-                        ? 7
-                        : 8, // લેન્ડસ્કેપમાં ૭ ભાગ, પોટ્રેટમાં ૮
+                    flex: context.isLandscape ? 7 : 8,
                     child: CustomContainer(
                       borderRadius: resUI.borderRadius,
                       defaultGradient: false,
@@ -55,15 +50,19 @@ class _MapScreenState extends State<MapScreen> {
                           padding: EdgeInsets.symmetric(
                               horizontal: 10.dg, vertical: 3.dg),
                           child: CustomSearch(
-                            textEditingController: controller.searchController,
-                            hintText: "Search Location",
+                            textEditingController:
+                                mapCtrl.weatherCtrl.searchController,
+                            hintText: "search Location",
                             prefixIcon: Icons.search,
-                            suffixIcon: controller.searchQuery.value.isNotEmpty
-                                ? Icons.close
-                                : null,
-                            onTap: () => controller.clearSearch(),
-                            onChange: (v) => controller.searchQuery.value = v,
-                            onSubmit: (value) => controller.searchByCity(value),
+                            suffixIcon:
+                                mapCtrl.weatherCtrl.searchQuery.value.isNotEmpty
+                                    ? Icons.close
+                                    : null,
+                            onTap: () => mapCtrl.weatherCtrl.clearSearch(),
+                            onChange: (v) =>
+                                mapCtrl.weatherCtrl.searchQuery.value = v,
+                            onSubmit: (value) =>
+                                mapCtrl.weatherCtrl.searchByCity(value),
                             keyboardType: TextInputType.text,
                             textInputAction: TextInputAction.search,
                           ),
@@ -71,12 +70,7 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                   ),
-
-                  SizedBox(
-                      width: 8
-                          .w), // થોડી વધારે જગ્યા આપવી (લેન્ડસ્કેપ માટે સારી લાગે)
-
-                  // ૨. હોમ બટન (રેપ વિથ ઇન્ટ્રિન્સિક અથવા ફિક્સ્ડ પેડિંગ)
+                  SizedBox(width: 8.w),
                   CustomContainer(
                     borderRadius: resUI.borderRadius,
                     defaultGradient: false,
@@ -86,7 +80,6 @@ class _MapScreenState extends State<MapScreen> {
                       onTap: () => Get.toNamed(AppRoutes.home),
                       child: Padding(
                         padding: EdgeInsets.symmetric(
-                          // લેન્ડસ્કેપમાં વર્ટિકલ પેડિંગ થોડું ઘટાડવું કારણ કે હાઈટ ઓછી હોય છે
                           horizontal: 15.dg,
                           vertical: context.isLandscape ? 4.dg : 15.dg,
                         ),
@@ -98,7 +91,7 @@ class _MapScreenState extends State<MapScreen> {
                               text: "Home",
                               fontWeight: FontWeight.bold,
                               fontSize: 14.sp,
-                              color: Colors.deepOrange,
+                              fontColor: Colors.deepOrange,
                             ),
                           ],
                         ),
@@ -112,32 +105,30 @@ class _MapScreenState extends State<MapScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12.r),
                   child: FlutterMap(
-                    mapController: mapCtrl.mapControllerImpl,
+                    mapController: mapCtrl.mapController,
                     options: MapOptions(
                       onMapReady: () {
                         mapCtrl.isMapReady.value = true;
                       },
                       initialCenter: LatLng(
-                        28.6139,
-                        77.2090,
+                        mapCtrl.locationCtrl.latitude.value!,
+                        mapCtrl.locationCtrl.longitude.value!,
                       ), // LatLng(lat, long)
                       initialZoom: 12,
                       onTap: (tapPosition, point) {
                         print(
                           "Map Tapped at: ${point.latitude}, ${point.longitude}",
-                        ); // આ પ્રિન્ટ થાય છે કે નહીં તે ચેક કરો
+                        );
                         mapCtrl.handleMapOnTap(point);
                       },
                     ),
                     children: [
-                      // 1. મેપના લેયર (Tiles) બતાવવા માટે (OpenStreetMap)
                       TileLayer(
                         urlTemplate:
                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.your.app.weather',
                       ),
                       Obx(() => MarkerLayer(markers: mapCtrl.markers.value)),
-                      // 2. તમારા કંટ્રોલરમાંથી માર્કર્સ બતાવવા માટે
                     ],
                   ),
                 ),

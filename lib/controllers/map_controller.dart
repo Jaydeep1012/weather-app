@@ -4,19 +4,29 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:weatherapp/controllers/currentlocation_controller.dart';
 import 'package:weatherapp/controllers/home_controller.dart';
-import 'package:weatherapp/services/latlong_services.dart';
 
 class AppMapController extends GetxController {
   /// flutter map package no controller
-  final MapControllerImpl mapControllerImpl = MapControllerImpl();
-  final LatLongServices _latLongServices = LatLongServices();
+
+  static AppMapController get to => Get.isRegistered<AppMapController>()
+      ? Get.find<AppMapController>()
+      : Get.put(AppMapController());
+  final RxString? currentCity = "".obs;
+
+  WeatherController get weatherCtrl => WeatherController.to;
+  LocationController get locationCtrl => LocationController.to;
+
+  /// MAP view in UI and LatLong fetch using latLong Services
+  final MapController mapController = MapController();
   RxList<Marker> markers = <Marker>[].obs;
   RxBool isMapReady = false.obs;
 
   @override
   void onInit() {
     super.onInit();
+    initializeMapLocation();
   }
 
   @override
@@ -25,14 +35,23 @@ class AppMapController extends GetxController {
     setCurrentLocation();
   }
 
+  Future<void> initializeMapLocation() async {
+    Position? position = await locationCtrl.getCurrentLocation();
+    if (position != null) {
+      updateLocationAndWeather(position.latitude, position.longitude);
+    }
+  }
+
   Future<void> setCurrentLocation() async {
-    /// get current location using LatLong services
-    Position? position = await _latLongServices.getCurrentLocation();
+    /// get current location using LatLong services (device current location)
+    Position? position = await locationCtrl.getCurrentLocation();
     if (position != null) {
       LatLng pos = LatLng(position.latitude, position.longitude);
       if (isMapReady.value) {
         try {
-          mapControllerImpl.move(pos, 14);
+          mapController.move(pos, 14);
+
+          /// map na Camara user search location par lai jay
         } catch (e) {
           print("MoveToLocation Error: $e");
         }
@@ -40,21 +59,10 @@ class AppMapController extends GetxController {
     }
   }
 
-  void moveToLocation(double lat, double long) {
+  void updateLocationAndWeather(double lat, double long,
+      {bool gpsCityName = true}) {
     LatLng newPos = LatLng(lat, long);
 
-    // જો મેપ તૈયાર હોય તો જ મૂવ કરવો
-    if (isMapReady.value) {
-      try {
-        mapControllerImpl.move(newPos, 14);
-      } catch (e) {
-        print("Map Move Error: $e");
-      }
-    } else {
-      print("Map is not ready yet. Just updating variables.");
-    }
-
-    // માર્કર તો તમે ગમે ત્યારે અપડેટ કરી શકો છો, તેમાં એરર નહીં આવે
     markers.assignAll([
       Marker(
         point: newPos,
@@ -63,8 +71,29 @@ class AppMapController extends GetxController {
         child: const Icon(Icons.location_on, color: Colors.red, size: 40),
       ),
     ]);
+
+    if (isMapReady.value && mapController != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mapController != null) {
+          try {
+            mapController.move(newPos, 14);
+          } catch (e) {
+            debugPrint("Map Move Error : $e");
+          }
+        }
+      });
+    }
+
+    if (gpsCityName) {
+      weatherCtrl.getCityName(
+        lat,
+        long,
+      );
+    }
+    weatherCtrl.getApiCall(lat, long);
   }
 
+  /// MAP par tap karse te location par mark set thase ane te location na data show karse
   void updateMarker(LatLng point) {
     markers.assignAll([
       Marker(
@@ -78,12 +107,12 @@ class AppMapController extends GetxController {
 
   void handleMapOnTap(LatLng point) {
     if (isMapReady.value) {
-      mapControllerImpl.move(point, 14);
+      mapController.move(point, 14);
     }
     markers.clear();
     updateMarker(point);
 
-    final WeatherController weatherCtrl = Get.find<WeatherController>();
+    /// Lat Long parthi city name find karse
     weatherCtrl.getCityName(point.latitude, point.longitude);
 
     /// on tap karse etle je te point parhi lat long select kari weather data get karse

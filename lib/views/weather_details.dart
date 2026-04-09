@@ -13,11 +13,6 @@ import '../core/widgets/custom_weatherScaffold.dart';
 import '../models/weatherModel.dart';
 
 class WeatherDetails extends GetView<WeatherDetailsController> {
-  static WeatherDetailsController get to =>
-      Get.isRegistered<WeatherDetailsController>()
-          ? Get.find<WeatherDetailsController>()
-          : Get.put(WeatherDetailsController());
-
   const WeatherDetails({super.key});
 
   @override
@@ -27,28 +22,23 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
       body: controller.obx(
         onLoading: Center(child: CircularProgressIndicator()),
         onError: (error) => Center(child: Text("Error: $error")),
-        // ૪. Empty State (જો ડેટા ન મળે ત્યારે) - Optional
         onEmpty: const Center(child: Text("Data Not available")),
         (data) {
           return Stack(
             children: [
-              // ૧. મુખ્ય સ્ટ્રક્ચર (Gradient + List)
               Column(
                 children: [
-                  // ઉપરનો ગ્રેડિયન્ટ ભાગ
                   Container(
                     height: 320.h,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      gradient: AppColors
-                          .primaryGradient, // આ કલર સ્ટેટસ બારની પાછળ પણ દેખાશે
+                      gradient: AppColors.primaryGradient,
                       borderRadius: BorderRadius.only(
                         bottomLeft: Radius.circular(30.dg),
                         bottomRight: Radius.circular(30.dg),
                       ),
                     ),
                     child: SafeArea(
-                      // આ કન્ટેનરની અંદર જ હોવું જોઈએ
                       bottom: false,
                       child: Column(
                         children: [
@@ -57,11 +47,8 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
                       ),
                     ),
                   ),
-
-                  // ૨. નીચેનું લિસ્ટ
                   Expanded(
                     child: ListView.builder(
-                      // પેલા કાર્ડ માટે ઉપરથી જગ્યા (Padding) છોડવી
                       padding: EdgeInsets.only(
                         top: 80.dg,
                         left: 10.dg,
@@ -87,11 +74,9 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
                 ],
               ),
 
-              /// ૩. તરતું કન્ટેનર (Overlay Card)
+              /// (Overlay Card)
               Positioned(
                 top: context.isLandscape ? 80.dg : 200.dg,
-
-                /// ગ્રેડિયન્ટ અને લિસ્ટની બરાબર વચ્ચે
                 left: 30.w,
                 right: 30.w,
                 child: CustomContainer(
@@ -102,7 +87,6 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
                   borderRadius: 20.r,
                   padding:
                       EdgeInsets.symmetric(horizontal: 20.dg, vertical: 20.dg),
-                  // શેડો આપવો ખૂબ જરૂરી છે પ્રોફેશનલ લુક માટે
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.6),
@@ -143,7 +127,6 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
     );
   }
 
-  // Stats માટે પ્રોફેશનલ વિજેટ
   Widget _buildStatItem(
     IconData icon,
     String value,
@@ -162,20 +145,19 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
         CustomText(
           text: value,
           fontSize: resUI?.normalFont,
-          color: AppColors.black,
+          fontColor: AppColors.black,
           fontWeight: FontWeight.bold,
         ),
         SizedBox(height: 6.dg),
         CustomText(
-            text: label, color: AppColors.gray, fontSize: resUI?.normalFont),
+            text: label,
+            fontColor: AppColors.gray,
+            fontSize: resUI?.normalFont),
       ],
     );
   }
 
-  // લિસ્ટ આઈટમ માટે પ્રોફેશનલ કાર્ડ
   Widget _buildForecastCard(HourlyItem item, int index, AppSize resUI) {
-    // તારીખમાંથી દિવસનું નામ મેળવવા માટે (દા.ત. 2026-03-25 -> Wednesday)
-    // અત્યારે સાદી રીતે બતાવવા માટે:
     String dateLabel = index == 0 ? "Today" : item.dateOnly;
     final condition = controller.getWeatherCondition(item);
     return Container(
@@ -201,7 +183,6 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
             ),
           ),
 
-          // ૨. વેધર આઈકોન અને સ્થિતિ
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -216,7 +197,6 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
             ),
           ),
 
-          // ૩. તાપમાન (Min/Max જો મોડેલમાં હોય તો, અત્યારે સિંગલ)
           SizedBox(
             width: 30.dg,
             child: Text(
@@ -247,7 +227,7 @@ class WeatherDetails extends GetView<WeatherDetailsController> {
             text: "7 Day Forecast",
             fontSize: resUI.normalFont,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            fontColor: Colors.white,
           ),
           const Spacer(),
           Icon(Icons.more_vert, color: Colors.white, size: resUI.normalFont),

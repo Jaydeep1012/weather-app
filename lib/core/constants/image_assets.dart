@@ -20,6 +20,7 @@ class ImageAssets {
   static const String partlyCloudNight = "$_basePath/partlyCloudNight.png";
   static const String thunderStormNight = "$_basePath/thunderNight.png";
   static const String mapImg = "$_basePath/map.png";
+  static const String byDefault = "$_basePath/default.png";
 }
 
 enum WeatherCondition {

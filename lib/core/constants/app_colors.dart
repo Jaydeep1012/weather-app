@@ -12,7 +12,8 @@ class AppColors {
   static const Color prim = Color(0xFF5CB8F1); // તમારો મેઈન કલર
   static const Color primLight = Color(0xFF07CAEC); // થોડો આછો કલર
 
-  static const Color red = Color(0xFFE89B9B);
+  static const Color lightRed = Color(0xFFE89B9B);
+  static const Color red = Color(0xFFE30808);
   static const Color yellow = Color(0xFFFFFF00);
   static const Color green = Color(0xFF4CAF50);
   static const Color black = Color(0xFF000000);

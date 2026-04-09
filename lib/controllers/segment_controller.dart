@@ -6,14 +6,15 @@ import 'home_controller.dart';
 
 class SegmentController extends GetxController
     with StateMixin<List<HourlyItem>> {
-  // Singleton pattern for easy access
-  static SegmentController get to => Get.isRegistered<SegmentController>()
-      ? Get.find<SegmentController>()
-      : Get.put(SegmentController());
+  // static SegmentController get to => Get.isRegistered<SegmentController>()
+  //     ? Get.find<SegmentController>()
+  //     : Get.put(SegmentController());
 
   // Dependency
-  final WeatherController _homeController = Get.find<WeatherController>();
+  /// Get view Controller no UI ma Used kare etle tena controller ne Get.find() thi inject karvu comparably
+  static SegmentController get to => Get.find();
 
+  final _homeController = WeatherController.to;
   // Observable Variables
   final RxMap<int, WeatherCondition> itemConditions =
       <int, WeatherCondition>{}.obs;
@@ -60,7 +61,7 @@ class SegmentController extends GetxController
     }
   }
 
-  // --- Helpers ---
+  /// Helpers
   String _getDayName(int weekday) {
     return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][weekday - 1];
   }
@@ -84,7 +85,6 @@ class SegmentController extends GetxController
 
   /// Professional approach to get Step and Limit based on Segment
   Map<String, int> _getSegmentConfig() {
-    // Map નો ઉપયોગ કરવાથી if-else ની જરૂર રહેતી નથી
     final configs = {
       0: {"step": 2, "limit": 12}, // 24 hours / 2 = 12 items
       1: {"step": 4, "limit": 6}, // 24 hours / 4 = 6 items
@@ -117,14 +117,12 @@ class SegmentController extends GetxController
         selectDay.time ?? now.toIso8601String(),
       );
 
-      // Start Index શોધવું
       int startIndex = _homeController.listData.indexWhere((item) {
         DateTime itemDate = DateTime.parse(item.time!);
         bool isSameDay = itemDate.year == tappedDate.year &&
             itemDate.month == tappedDate.month &&
             itemDate.day == tappedDate.day;
 
-        // જો આજનો દિવસ હોય, તો વર્તમાન કલાકથી શરૂ કરો, બાકી દિવસની શરૂઆતથી
         if (tappedDate.day == now.day && tappedDate.month == now.month) {
           return isSameDay && itemDate.hour == now.hour;
         }
@@ -140,11 +138,9 @@ class SegmentController extends GetxController
         if (nextIndex < _homeController.listData.length) {
           final item = _homeController.listData[nextIndex];
           filterData.add(item);
-          // Condition ને Map માં સ્ટોર કરવી
           itemConditions[i] = _homeController.getWeatherCondition(item);
         }
       }
-
       if (filterData.isNotEmpty) {
         change(filterData, status: RxStatus.success());
       } else {

@@ -15,12 +15,10 @@ class WeatherServices {
     try {
       /// API ne Uri datatype kari Uri.parse karvu j pade tena vagar API response na aapi sake
       final Uri url = Uri.parse(
-        "$_baseUrl?latitude=$lat&longitude=$long&hourly=temperature_2m,wind_speed_10m,relative_humidity_2m,rain,snowfall,weather_code,soil_temperature_0cm",
+        "$_baseUrl?latitude=$lat&longitude=$long&hourly=temperature_2m,wind_speed_10m,relative_humidity_2m,rain,snowfall,weather_code,soil_temperature_0cm&timezone=auto",
       );
 
       final response = await http.get(url);
-      print("API CALL HERE ## : ${response.statusCode}");
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 

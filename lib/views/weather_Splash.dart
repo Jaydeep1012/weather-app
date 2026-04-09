@@ -29,7 +29,6 @@ class WeatherSplashScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
-
                   children: [
                     CustomImage(
                       imagePath: ImageAssets.splash,
@@ -50,13 +49,11 @@ class WeatherSplashScreen extends StatelessWidget {
                         forceStrutHeight: true,
                       ),
                     ),
-
                     CustomText(
                       leadingDistribution: TextLeadingDistribution.proportional,
-
                       text: "Forecasts",
                       fontSize: resUI.largeFont,
-                      color: AppColors.yellow,
+                      fontColor: AppColors.yellow,
                       height: resUI.textLineHeight,
                       strutStyle: StrutStyle(
                         fontSize: resUI.largeFont,
@@ -64,18 +61,18 @@ class WeatherSplashScreen extends StatelessWidget {
                         forceStrutHeight: true,
                       ),
                     ),
-
                     SizedBox(height: context.res(mobile: 30.h)),
-
-                    CustomElevatedBtn(
-                      text: "Get Start",
-                      textColor: AppColors.black,
-                      fontSize: resUI.semiLargeFont,
-                      fontWeight: FontWeight.w600,
-                      bgColor: AppColors.yellow,
-                      onTap: () {
-                        Get.toNamed(AppRoutes.home);
-                      },
+                    Center(
+                      child: CustomElevatedBtn(
+                        text: "Get Start",
+                        textColor: AppColors.black,
+                        fontSize: resUI.semiLargeFont,
+                        fontWeight: FontWeight.w600,
+                        bgColor: AppColors.yellow,
+                        onTap: () {
+                          Get.toNamed(AppRoutes.home);
+                        },
+                      ),
                     ),
                   ],
                 ),
